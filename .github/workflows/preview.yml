@@ -43,5 +43,5 @@ jobs:
           failOnError: 'true'
           build: |
             pip install pipenv
-            pipenv install
+            pipenv -v --support install
             pipenv run mkdocs build --config-file mkdocs.production.yml
