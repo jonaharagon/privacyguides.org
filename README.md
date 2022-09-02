@@ -115,5 +115,3 @@ If you commit to `main` with commits signed with your SSH key, you should add yo
 2. Push the tag to GitHub: `git push --tags`
 3. A GitHub Release will be automatically created and deployed to the live site.
     - You may wish to manually check or edit the release changelog/title after it is published for accuracy.
-
-test
