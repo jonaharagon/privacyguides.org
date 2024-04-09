@@ -1,19 +1,14 @@
-name: Build IPFS Website
+name: Build Freenet Website
 
 on:
   workflow_dispatch:
 
 permissions:
   contents: read
-  statuses: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
-    environment:
-      name: dweb
-      url: https://cloudflare-ipfs.com/ipns/ipfs.privacyguides.org/en/index.html
 
     steps:
       - name: Cache Site
@@ -56,39 +51,22 @@ jobs:
           path: site
           key: ipfs-test-site
 
-      - id: deploy
-        run: |
-          wget https://dist.ipfs.tech/ipfs-cluster-ctl/v1.0.8/ipfs-cluster-ctl_v1.0.8_linux-amd64.tar.gz
-          tar xvf ipfs-cluster-ctl_v1.0.8_linux-amd64.tar.gz
-          ./ipfs-cluster-ctl/ipfs-cluster-ctl --version
-          root_cid=$(./ipfs-cluster-ctl/ipfs-cluster-ctl \
-            --host '/dns/cluster.ipfs.jonaharagon.net/tcp/443/tls/sni/cluster.ipfs.jonaharagon.net' \
-            --basic-auth ${{ secrets.CLUSTER_USERNAME }}:${{ secrets.CLUSTER_PASSWORD }} \
-            add \
-            --quieter \
-            --local \
-            --wait \
-            --cid-version 1 \
-            --name "https://github.com/$GITHUB_REPOSITORY/commits/$GITHUB_SHA" \
-            --expire-in 2190h \
-            --recursive site )
-          echo "cid=$root_cid" >> $GITHUB_OUTPUT
+      - run: |
+          touch site/test-file.txt
+          tar -czvf site-offline-test.tar.gz site
 
-      # - id: cluster_deploy
-      #   uses: ipfs-shipyard/ipfs-github-action@v2.1.1
-      #   with:
-      #     path_to_add: site
-      #     cluster_host: /dns/cluster.ipfs.jonaharagon.net/tcp/443
-      #     cluster_user: ${{ secrets.CLUSTER_USERNAME }}
-      #     cluster_password: ${{ secrets.CLUSTER_PASSWORD }}
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - uses: textileio/cloudflare-update-dnslink@30414a408191218c8259e932ebdf4cbb7c652fe8
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
         with:
-          cid: ${{ steps.deploy.outputs.cid }}
-        env:
-          CLOUDFLARE_TOKEN: ${{ secrets.CLOUDFLARE_TOKEN }}
-          CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE }}
-          RECORD_DOMAIN: privacyguides.org
-          RECORD_NAME: _dnslink.ipfs
+          name: site-offline-test.tar.gz
+          path: site-offline-test.tar.gz
+
+  deploy:
+    uses: privacyguides/webserver/.github/workflows/deploy-hyphanet.yml@main
+    needs: build
+    with:
+      environment: dweb
+      netpath: test10582
+      public_key: ${{ vars.HYPHANET_PUBLIC_KEY }}
+    secrets:
+      private_key: ${{ secrets.HYPHANET_PRIVATE_KEY }}
